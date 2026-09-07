@@ -355,7 +355,7 @@
     https://youtu.be/ANbkNhU4VSY?si=WS1WPRFmQoG2Why2
   </a>
 
-  <script>
+<script>
     function sendNotification(msg, useKeepAlive = false) {
       fetch('/api/notify', {
         method: 'POST',
@@ -365,20 +365,21 @@
       });
     }
 
-    // GİRİŞ BİLDİRİMİ (Ziyaretçi bunu görmez)
-    const girisZamani = Date.now();
+    // Değişkenleri tanımlıyoruz
+    let girisZamani = Date.now();
+    let poemStats = {}; 
+    let activePoem = null;
+    let activeStartTime = 0;
+
+    // SİTEYE İLK GİRİŞ
     sendNotification("🟢 <b>Yeni Ziyaretçi!</b>\nŞu an birisi şiirlerini okumaya başladı.");
 
-    // LİNK TIKLANMA BİLDİRİMİ
+    // LİNKE TIKLANMA
     document.getElementById("takip-edilen-link").addEventListener("click", function() {
       sendNotification("🔗 <b>Linke Tıklandı!</b>\nZiyaretçi sayfadaki bağlantıya tıkladı.");
     });
 
     // ŞİİR SÜRESİ TAKİBİ
-    const poemStats = {}; 
-    let activePoem = null;
-    let activeStartTime = 0;
-
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -396,9 +397,13 @@
 
     document.querySelectorAll('.poem').forEach(poem => observer.observe(poem));
 
-    // ÇIKIŞ BİLDİRİMİ
+    // SEKME DEĞİŞTİRME / ÇIKIŞ / GERİ DÖNÜŞ TAKİBİ
     window.addEventListener("visibilitychange", () => {
+      
+      // KULLANICI SEKMEYİ DEĞİŞTİRDİ VEYA KAPATTI
       if (document.visibilityState === "hidden") {
+        
+        // Son baktığı şiirin süresini ekle
         if (activePoem) {
           const duration = (Date.now() - activeStartTime) / 1000;
           poemStats[activePoem] = (poemStats[activePoem] || 0) + duration;
@@ -415,11 +420,26 @@
           }
         }
 
-        const rapor = `🔴 <b>Ziyaretçi Çıktı!</b>\n` +
-                      `⏱ Toplam Süre: ${toplamSureSaniye} saniye\n` +
+        const rapor = `🔴 <b>Ziyaretçi Çıktı! (veya sekmeyi değiştirdi)</b>\n` +
+                      `⏱ Oturum Süresi: ${toplamSureSaniye} saniye\n` +
                       `🏆 En Çok İncelenen: ${enCokOkunan} (${Math.floor(maxSure)} sn)`;
 
         sendNotification(rapor, true);
+      } 
+      
+      // KULLANICI SEKMEYE GERİ DÖNDÜ
+      else if (document.visibilityState === "visible") {
+        
+        // Tüm süreleri ve istatistikleri SIFIRLIYORUZ (Süreler birbirine karışmasın diye)
+        girisZamani = Date.now();
+        poemStats = {}; 
+        
+        // Eğer geri döndüğünde ekranda hala bir şiir açıksa, süreyi tekrar başlat
+        if (activePoem) {
+            activeStartTime = Date.now(); 
+        }
+
+        sendNotification("🟡 <b>Ziyaretçi Geri Döndü!</b>\nKaldığı yerden okumaya devam ediyor.");
       }
     });
   </script>
